@@ -1481,10 +1481,20 @@ input.mfa-code { text-align: center; font-size: 26px !important; font-weight: 75
 }
 
 .admin-page-heading { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 14px; margin-bottom: 20px; }
+.admin-page-heading > div:first-child { flex: 1 1 220px; min-width: 0; }
 .admin-page-heading > div > span { display: block; margin-bottom: 6px; color: var(--brand-600); font-size: 12px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
 .admin-page-heading h1 { font-size: 24px; letter-spacing: -.03em; font-weight: 800; }
 .admin-page-heading p { margin-top: 6px; color: var(--muted); font-size: 14.5px; max-width: 64ch; }
+/* Keep primary actions on the right for one-handed (right-thumb) reach on mobile. */
+.admin-page-heading > .button,
+.admin-page-heading > .admin-page-actions,
+.admin-page-heading > .date-chip { margin-left: auto; flex: none; }
 .date-chip { display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--muted); font-size: 12.5px; font-weight: 600; }
+@media (max-width: 639px) {
+  .admin-page-heading { align-items: stretch; }
+  .admin-page-heading > .button,
+  .admin-page-heading > .admin-page-actions { align-self: flex-end; }
+}
 @media (min-width: 1024px) { .admin-page-heading h1 { font-size: 30px; } }
 
 .metrics-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 14px; }
