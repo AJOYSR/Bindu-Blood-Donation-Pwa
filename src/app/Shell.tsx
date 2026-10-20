@@ -7,6 +7,7 @@ import { LanguageSwitcher } from '../components/LanguageSwitcher'
 import { RouteProgress } from '../components/RouteProgress'
 import { PageSkeleton } from '../components/Skeleton'
 import { useAuth } from './AuthContext'
+import { usePermissions } from '../lib/permissions'
 import { useT } from '../i18n'
 
 function initialsFor(name: string) {
@@ -27,6 +28,7 @@ function useScrolled(threshold = 8) {
 export function Shell() {
   const { notifications } = useApp()
   const { user } = useAuth()
+  const { isSuperAdmin } = usePermissions()
   const t = useT()
   const location = useLocation()
   const path = location.pathname
@@ -56,6 +58,7 @@ export function Shell() {
           <NavLink to="/requests" end>{t('shell.nav.requests')}</NavLink>
           {user && <NavLink to="/dashboard">{t('shell.nav.dashboard')}</NavLink>}
           <NavLink to="/about">{t('shell.nav.about')}</NavLink>
+          {isSuperAdmin && <NavLink to="/admin">{t('shell.nav.admin')}</NavLink>}
         </nav>
         <div className="topbar-actions">
           <LanguageSwitcher compact />
@@ -65,13 +68,14 @@ export function Shell() {
           {user
             ? <Link to="/profile" className="avatar-button hide-mobile" aria-label={t('shell.nav.yourProfile')}>{initialsFor(displayName)}</Link>
             : <Link to="/register" className="button button-ghost button-sm hide-mobile">{t('shell.nav.signIn')}</Link>}
+          {isSuperAdmin && <Link to="/admin" className="button button-secondary button-sm hide-mobile"><ShieldCheck />{t('shell.nav.admin')}</Link>}
           <Link to="/requests/new" className="button button-primary button-sm topbar-cta"><Plus />{t('shell.nav.requestBlood')}</Link>
           <button type="button" className="icon-button menu-button" aria-label={t('shell.menu.open')} aria-expanded={menuOpen} onClick={() => setMenuOpen(true)}><Menu /></button>
         </div>
       </div>
     </header>
 
-    <MobileMenu open={menuOpen} onClose={() => setMenuOpen(false)} displayName={displayName} />
+    <MobileMenu open={menuOpen} onClose={() => setMenuOpen(false)} displayName={displayName} isSuperAdmin={isSuperAdmin} />
 
     <main id="main" className="site-main">
       <div className="page-transition" key={path}>
@@ -133,7 +137,7 @@ export function Shell() {
   </div>
 }
 
-function MobileMenu({ open, onClose, displayName }: { open: boolean; onClose: () => void; displayName: string }) {
+function MobileMenu({ open, onClose, displayName, isSuperAdmin }: { open: boolean; onClose: () => void; displayName: string; isSuperAdmin: boolean }) {
   const { user } = useAuth()
   const t = useT()
   const [mounted, setMounted] = useState(open)
@@ -160,7 +164,8 @@ function MobileMenu({ open, onClose, displayName }: { open: boolean; onClose: ()
     { to: '/find-donors', icon: Search, label: t('shell.nav.findDonors'), desc: t('shell.menu.findDesc') },
     { to: '/requests', icon: Droplet, label: t('shell.nav.requests'), desc: t('shell.menu.requestsDesc'), end: true },
     ...(user ? [{ to: '/dashboard', icon: LayoutDashboard, label: t('shell.nav.dashboard'), desc: t('shell.menu.dashboardDesc') }] : []),
-    { to: '/about', icon: Info, label: t('shell.nav.about'), desc: t('shell.menu.aboutDesc') }
+    { to: '/about', icon: Info, label: t('shell.nav.about'), desc: t('shell.menu.aboutDesc') },
+    ...(isSuperAdmin ? [{ to: '/admin', icon: ShieldCheck, label: t('shell.nav.admin'), desc: t('shell.menu.adminDesc') }] : [])
   ]
 
   return <div className={open ? 'menu-layer is-open' : 'menu-layer'} role="dialog" aria-modal="true" aria-label={t('shell.menu.title')}>

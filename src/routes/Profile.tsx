@@ -7,6 +7,8 @@ import { DateTimePicker } from '../components/DateTimePicker'
 import { useReasonDialog } from '../components/ReasonDialog'
 import { Skeleton, Spinner } from '../components/Skeleton'
 import { useT } from '../i18n'
+import { track } from '../lib/analytics'
+import { reportError } from '../lib/monitoring'
 import { bloodGroups, districts } from '../lib/mock-data'
 import { exportMyData, fetchMemberProfile, persistAvailability, recordConsent, requestAccountDeletion, saveMemberProfile, saveNotificationPreferences, submitVerification, type MemberProfile } from '../lib/api'
 import { registerPushSubscription } from '../lib/push'
@@ -79,6 +81,7 @@ export default function Profile() {
       setProfile((current) => current ? { ...current, ...next } : current)
       notify(t('profile.toast.saved'), t('profile.toast.savedMsg'), 'success')
     } catch (error) {
+      reportError(error, { source: 'profile', action: 'save' })
       notify(t('profile.toast.saveFail'), error instanceof Error ? error.message : t('common.pleaseTryAgain'), 'danger')
     } finally {
       setSaving(false)
@@ -93,17 +96,20 @@ export default function Profile() {
       if (!navigator.onLine) {
         queueAvailabilityUpdate(next)
         setProfile({ ...profile, available: next })
+        track('availability_changed', { available: next, offline: true })
         notify(t('profile.toast.queued'), t('profile.toast.queuedMsg'), 'success')
         return
       }
       await persistAvailability(next)
       setProfile({ ...profile, available: next })
+      track('availability_changed', { available: next, offline: false })
       notify(
         next ? t('profile.toast.availableOn') : t('profile.toast.availableOff'),
         next ? t('profile.toast.availableOnMsg') : t('profile.toast.availableOffMsg'),
         'success'
       )
     } catch (error) {
+      reportError(error, { source: 'profile', action: 'availability' })
       notify(t('profile.toast.availabilityFail'), error instanceof Error ? error.message : t('common.pleaseTryAgain'), 'danger')
     } finally {
       setAvailabilitySaving(false)
@@ -114,10 +120,13 @@ export default function Profile() {
     const file = event.target.files?.[0]
     if (!file) return
     setUploading(true)
+    track('verification_upload_started')
     try {
       await submitVerification(file)
+      track('verification_upload_completed')
       notify(t('profile.toast.verifyOk'), t('profile.toast.verifyOkMsg'), 'success')
     } catch (error) {
+      reportError(error, { source: 'profile', action: 'verification_upload' })
       notify(t('profile.toast.uploadFail'), error instanceof Error ? error.message : t('common.pleaseTryAgain'), 'danger')
     } finally {
       setUploading(false)
@@ -135,8 +144,10 @@ export default function Profile() {
       link.download = `bindu-export-${new Date().toISOString().slice(0, 10)}.json`
       link.click()
       URL.revokeObjectURL(url)
+      track('data_exported')
       notify(t('profile.toast.exportOk'), t('profile.toast.exportOkMsg'), 'success')
     } catch (error) {
+      reportError(error, { source: 'profile', action: 'export' })
       notify(t('profile.toast.exportFail'), error instanceof Error ? error.message : t('common.pleaseTryAgain'), 'danger')
     }
   }
@@ -160,8 +171,10 @@ export default function Profile() {
     if (!reason) return
     try {
       await requestAccountDeletion(reason)
+      track('account_deletion_requested')
       notify(t('profile.toast.deleteOk'), t('profile.toast.deleteOkMsg'), 'success')
     } catch (error) {
+      reportError(error, { source: 'profile', action: 'delete_account' })
       notify(t('profile.toast.deleteFail'), error instanceof Error ? error.message : t('common.pleaseTryAgain'), 'danger')
     }
   }

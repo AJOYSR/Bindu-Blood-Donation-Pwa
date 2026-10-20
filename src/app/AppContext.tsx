@@ -2,6 +2,8 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 import { donors as initialDonors, notifications as initialNotifications, requests as initialRequests } from '../lib/mock-data'
 import type { BloodRequest, Donor, NotificationItem } from '../types'
 import { createBloodRequest, createResponse, fetchDonors, fetchNotifications, fetchRequests, persistAvailability, persistNotificationsRead } from '../lib/api'
+import { track } from '../lib/analytics'
+import { reportError } from '../lib/monitoring'
 import { flushAvailabilityQueue } from '../lib/offline-queue'
 import { useAuth } from './AuthContext'
 import { useI18n } from '../i18n'
@@ -74,19 +76,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
       try {
         await persistAvailability(available)
         if (user) setDonors((current) => current.map((donor) => donor.id === user.id ? { ...donor, available } : donor))
+        track('availability_changed', { available, offline: false })
         notify(
           available ? t('toast.availableOn') : t('toast.availableOff'),
           available ? t('toast.availableOnMsg') : t('toast.availableOffMsg'),
           'success'
         )
       } catch (error) {
+        reportError(error, { source: 'app', action: 'availability' })
         notify(t('toast.availabilityFail'), error instanceof Error ? error.message : t('common.pleaseTryAgain'), 'danger')
         throw error
       }
     },
     markNotificationsRead: () => {
       setNotifications((current) => current.map((item) => ({ ...item, read: true })))
-      void persistNotificationsRead().catch(() => notify(t('toast.notificationsFail'), t('common.pleaseTryAgain'), 'danger'))
+      void persistNotificationsRead().catch((error) => {
+        reportError(error, { source: 'app', action: 'notifications_read' })
+        notify(t('toast.notificationsFail'), t('common.pleaseTryAgain'), 'danger')
+      })
     },
     notify,
     dismissToast: (id) => setToasts((current) => current.filter((toast) => toast.id !== id))
