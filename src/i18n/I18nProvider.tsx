@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { track } from '../lib/analytics'
 import type { TranslationKey } from './en'
 import {
   htmlLang,
@@ -26,7 +27,10 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     void root.offsetWidth // restart the cross-fade animation
     root.classList.add('is-lang-swap')
     window.setTimeout(() => root.classList.remove('is-lang-swap'), 450)
-    setLocaleState(next)
+    setLocaleState((current) => {
+      if (current !== next) track('language_changed', { locale: next })
+      return next
+    })
     try { localStorage.setItem(localeStorageKey, next) } catch { /* ignore */ }
   }, [])
 

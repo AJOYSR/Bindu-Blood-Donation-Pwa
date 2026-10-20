@@ -7,6 +7,7 @@ import { useAuth } from '../app/AuthContext'
 import { CaptchaField, isCaptchaBlocked } from '../components/CaptchaField'
 import { Spinner } from '../components/Skeleton'
 import { track } from '../lib/analytics'
+import { reportError } from '../lib/monitoring'
 import { useT } from '../i18n'
 
 type Mode = 'signin' | 'signup' | 'magic'
@@ -65,10 +66,12 @@ export default function Register() {
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password, options: captchaOptions })
         if (error) throw error
+        track('sign_in_completed', { method: 'password' })
         notify(t('auth.toast.welcome'), t('auth.toast.welcomeMsg'), 'success')
         navigate(destination, { replace: true })
       }
     } catch (error) {
+      reportError(error, { source: 'auth', action: mode })
       notify(mode === 'signup' ? t('auth.toast.createFail') : t('auth.toast.signInFail'), error instanceof Error ? error.message : t('common.pleaseTryAgain'), 'danger')
     } finally {
       setLoading(false)
