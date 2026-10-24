@@ -16,3 +16,24 @@ export async function stripImageMetadata(file: File): Promise<File> {
   const extension = file.type === 'image/png' ? 'png' : 'jpg'
   return new File([blob], file.name.replace(/\.[^.]+$/, `.${extension}`), { type: blob.type, lastModified: Date.now() })
 }
+
+/** Decode, resize and re-encode public photos so metadata is never uploaded. */
+export async function prepareProfilePhoto(file: File): Promise<File> {
+  const bitmap = await createImageBitmap(file)
+  try {
+    const scale = Math.min(1, 800 / Math.max(bitmap.width, bitmap.height))
+    const canvas = document.createElement('canvas')
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale))
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale))
+    const context = canvas.getContext('2d')
+    if (!context) throw new Error('Image processing is unavailable.')
+    context.fillStyle = '#ffffff'
+    context.fillRect(0, 0, canvas.width, canvas.height)
+    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.85))
+    if (!blob) throw new Error('Could not process this photo.')
+    return new File([blob], 'profile.jpg', { type: 'image/jpeg' })
+  } finally {
+    bitmap.close()
+  }
+}

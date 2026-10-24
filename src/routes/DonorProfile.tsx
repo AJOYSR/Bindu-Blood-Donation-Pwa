@@ -44,7 +44,7 @@ export default function DonorProfile() {
       <div className="detail-main">
         <article className="card detail-main">
           <div className="donor-hero">
-            <BloodBadge group={donor.bloodGroup} size="lg" />
+            <div className="donor-photo-badge">{donor.avatarUrl && <img src={donor.avatarUrl} alt="" loading="lazy" />}<BloodBadge group={donor.bloodGroup} size={donor.avatarUrl ? "sm" : "lg"} /></div>
             <div>
               <span className={`availability-dot ${donor.available ? 'is-on' : ''}`}>{donor.available ? t('donor.availableNow') : t('donor.restingNow')}</span>
               <h1>{donor.displayName}{donor.verified && <BadgeCheck aria-label={t('donor.verified')} />}</h1>

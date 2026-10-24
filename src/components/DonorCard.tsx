@@ -12,7 +12,7 @@ export function DonorCard({ donor }: { donor: Donor }) {
     className="donor-card"
     aria-label={t('card.ariaDonor', { name: donor.displayName, group: donor.bloodGroup, status })}
   >
-    <BloodBadge group={donor.bloodGroup} size="lg" />
+    <div className="donor-photo-badge">{donor.avatarUrl && <img src={donor.avatarUrl} alt="" loading="lazy" />}<BloodBadge group={donor.bloodGroup} size={donor.avatarUrl ? "sm" : "lg"} /></div>
     <div className="dc-body">
       <div className="dc-name"><h3>{donor.displayName}</h3>{donor.verified && <BadgeCheck aria-label={t('card.verified')} />}</div>
       <p><MapPin />{donor.area}, {donor.district}{donor.distanceKm > 0 ? ` · ${donor.distanceKm} km` : ''}</p>

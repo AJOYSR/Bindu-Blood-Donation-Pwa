@@ -10,6 +10,7 @@ import { useI18n } from '../i18n'
 
 interface Toast { id: number; title: string; message?: string; tone?: 'default' | 'success' | 'danger' }
 interface AppState {
+  updateDonorPhoto: (id: string, avatarUrl: string) => void
   donors: Donor[]
   requests: BloodRequest[]
   notifications: NotificationItem[]
@@ -51,6 +52,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }
 
   const value = useMemo<AppState>(() => ({
+    updateDonorPhoto: (id, avatarUrl) => setDonors((current) => current.map((donor) => donor.id === id ? { ...donor, avatarUrl } : donor)),
     donors,
     requests,
     notifications,

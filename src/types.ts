@@ -4,6 +4,7 @@ export type RequestStatus = 'open' | 'matched' | 'fulfilled' | 'expired' | 'canc
 export type AppRole = 'member' | 'verified_donor' | 'support' | 'moderator' | 'operations_admin' | 'analyst' | 'super_admin'
 
 export interface Donor {
+  avatarUrl?: string | null
   backendId?: string
   id: string
   displayName: string

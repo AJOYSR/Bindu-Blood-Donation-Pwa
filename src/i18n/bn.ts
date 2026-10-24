@@ -1,6 +1,21 @@
 import type { TranslationDict } from './en'
 
 export const bn: TranslationDict = {
+  'profile.photo.upload': 'ছবি আপলোড করুন',
+  'profile.photo.change': 'ছবি পরিবর্তন করুন',
+  'profile.photo.title': 'প্রোফাইল ছবি',
+  'profile.photo.public': 'আপনার ছবি সবার জন্য উন্মুক্ত এবং দাতা প্রোফাইলে দেখা যাবে।',
+  'profile.photo.choose': 'ছবি আপলোড বা পরিবর্তন করুন',
+  'profile.photo.help': 'JPG, PNG অথবা WebP ছবি, সর্বোচ্চ ৫ মেগাবাইট।',
+  'profile.photo.saved': 'প্রোফাইল ছবি সংরক্ষিত হয়েছে',
+  'profile.photo.failed': 'ছবি আপলোড করা যায়নি',
+  'shell.nav.contacts': 'যোগাযোগ',
+  'shell.menu.contactsDesc': 'আমাদের সঙ্গে যোগাযোগ করুন',
+  'contacts.phoneLabel': 'ফোন ও হোয়াটসঅ্যাপ',
+  'contacts.call': 'কল করুন',
+  'contacts.whatsapp': 'হোয়াটসঅ্যাপে মেসেজ করুন',
+  'contacts.title': 'যোগাযোগ',
+  'contacts.lead': 'দাতা নিবন্ধন ও রক্তের অনুরোধ সম্পর্কে সাহায্যের জন্য বিন্দু টিমের সঙ্গে যোগাযোগ করুন।',
   'common.clearFilters': 'ফিল্টার মুছুন',
   'shell.nav.home': 'হোম',
   'shell.menu.open': 'মেনু খুলুন',

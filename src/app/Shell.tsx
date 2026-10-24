@@ -1,4 +1,4 @@
-import { ArrowRight, Bell, ChevronRight, Droplet, HeartHandshake, Home, Info, LayoutDashboard, Menu, Phone, Plus, Search, ShieldCheck, UserRound, X } from 'lucide-react'
+import { ArrowRight, Bell, ChevronRight, Droplet, HeartHandshake, Home, Info, Menu, Phone, Plus, ShieldCheck, UserRound, X } from 'lucide-react'
 import { Suspense, useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useApp } from './AppContext'
@@ -54,9 +54,9 @@ export function Shell() {
       <div className="container topbar-inner">
         <Brand />
         <nav className="topnav" aria-label={t('shell.nav.main')}>
-          <NavLink to="/find-donors">{t('shell.nav.findDonors')}</NavLink>
+          <NavLink to="/" end>{t('shell.nav.home')}</NavLink>
           <NavLink to="/requests" end>{t('shell.nav.requests')}</NavLink>
-          {user && <NavLink to="/dashboard">{t('shell.nav.dashboard')}</NavLink>}
+          <NavLink to="/contacts">{t('shell.nav.contacts')}</NavLink>
           <NavLink to="/about">{t('shell.nav.about')}</NavLink>
           {isSuperAdmin && <NavLink to="/admin">{t('shell.nav.admin')}</NavLink>}
         </nav>
@@ -66,9 +66,8 @@ export function Shell() {
             <Bell />{unread > 0 && <span className="notif-count">{unread > 9 ? '9+' : unread}</span>}
           </Link>}
           {user
-            ? <Link to="/profile" className="avatar-button hide-mobile" aria-label={t('shell.nav.yourProfile')}>{initialsFor(displayName)}</Link>
+            ? <Link to="/dashboard" className="avatar-button hide-mobile" aria-label={t('shell.nav.dashboard')}>{initialsFor(displayName)}</Link>
             : <Link to="/register" className="button button-ghost button-sm hide-mobile">{t('shell.nav.signIn')}</Link>}
-          {isSuperAdmin && <Link to="/admin" className="button button-secondary button-sm hide-mobile"><ShieldCheck />{t('shell.nav.admin')}</Link>}
           <Link to="/requests/new" className="button button-primary button-sm topbar-cta"><Plus />{t('shell.nav.requestBlood')}</Link>
           <button type="button" className="icon-button menu-button" aria-label={t('shell.menu.open')} aria-expanded={menuOpen} onClick={() => setMenuOpen(true)}><Menu /></button>
         </div>
@@ -106,7 +105,7 @@ export function Shell() {
           <div className="footer-col">
             <h4>{t('shell.footer.learn')}</h4>
             <Link to="/about">{t('shell.footer.howItWorks')}</Link>
-            <Link to="/about">{t('shell.footer.safety')}</Link>
+            <Link to="/contacts">{t('shell.nav.contacts')}</Link>
           </div>
           <a className="footer-emergency" href="tel:999">
             <span className="footer-emergency-icon"><Phone /></span>
@@ -128,9 +127,9 @@ export function Shell() {
     <nav className="tabbar" aria-label={t('shell.tab.primary')}>
       <div className="tabbar-inner">
         <Link to="/" className={tabClass(path === '/')}><Home />{t('shell.tab.home')}</Link>
-        <Link to="/find-donors" className={tabClass(path.startsWith('/find-donors') || path.startsWith('/donors'))}><Search />{t('shell.tab.donors')}</Link>
-        <Link to="/requests/new" className={`${tabClass(path === '/requests/new')} tab-primary`}><span className="tab-fab"><Plus /></span>{t('shell.tab.request')}</Link>
-        <Link to="/requests" className={tabClass(isRequestsTab)}><Droplet />{t('shell.tab.needs')}</Link>
+        <Link to="/requests" className={tabClass(isRequestsTab)}><Droplet />{t('shell.nav.requests')}</Link>
+        <Link to="/contacts" className={tabClass(path === '/contacts')}><Phone />{t('shell.nav.contacts')}</Link>
+        <Link to="/about" className={tabClass(path === '/about')}><Info />{t('shell.nav.about')}</Link>
         <Link to={user ? '/dashboard' : '/register'} className={tabClass(isAccountTab)}><UserRound />{user ? t('shell.tab.account') : t('shell.tab.signIn')}</Link>
       </div>
     </nav>
@@ -161,9 +160,8 @@ function MobileMenu({ open, onClose, displayName, isSuperAdmin }: { open: boolea
 
   const links = [
     { to: '/', icon: Home, label: t('shell.nav.home'), desc: t('shell.menu.homeDesc'), end: true },
-    { to: '/find-donors', icon: Search, label: t('shell.nav.findDonors'), desc: t('shell.menu.findDesc') },
     { to: '/requests', icon: Droplet, label: t('shell.nav.requests'), desc: t('shell.menu.requestsDesc'), end: true },
-    ...(user ? [{ to: '/dashboard', icon: LayoutDashboard, label: t('shell.nav.dashboard'), desc: t('shell.menu.dashboardDesc') }] : []),
+    { to: '/contacts', icon: Phone, label: t('shell.nav.contacts'), desc: t('shell.menu.contactsDesc') },
     { to: '/about', icon: Info, label: t('shell.nav.about'), desc: t('shell.menu.aboutDesc') },
     ...(isSuperAdmin ? [{ to: '/admin', icon: ShieldCheck, label: t('shell.nav.admin'), desc: t('shell.menu.adminDesc') }] : [])
   ]
@@ -177,9 +175,9 @@ function MobileMenu({ open, onClose, displayName, isSuperAdmin }: { open: boolea
       </div>
 
       {user
-        ? <Link to="/profile" className="menu-user">
+        ? <Link to="/dashboard" className="menu-user">
             <span className="avatar-button">{initialsFor(displayName)}</span>
-            <span><strong>{displayName}</strong><small>{t('shell.nav.yourProfile')}</small></span>
+            <span><strong>{displayName}</strong><small>{t('shell.nav.dashboard')}</small></span>
             <ChevronRight />
           </Link>
         : <div className="menu-auth">

@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../app/AppContext'
 import { useAuth } from '../app/AuthContext'
+import { ProfilePhotoUpload } from '../components/ProfilePhotoUpload'
 import { DateTimePicker } from '../components/DateTimePicker'
 import { useReasonDialog } from '../components/ReasonDialog'
 import { Skeleton, Spinner } from '../components/Skeleton'
@@ -10,7 +11,7 @@ import { useT } from '../i18n'
 import { track } from '../lib/analytics'
 import { reportError } from '../lib/monitoring'
 import { bloodGroups, districts } from '../lib/mock-data'
-import { exportMyData, fetchMemberProfile, persistAvailability, recordConsent, requestAccountDeletion, saveMemberProfile, saveNotificationPreferences, submitVerification, type MemberProfile } from '../lib/api'
+import { uploadProfilePhoto, exportMyData, fetchMemberProfile, persistAvailability, recordConsent, requestAccountDeletion, saveMemberProfile, saveNotificationPreferences, submitVerification, type MemberProfile } from '../lib/api'
 import { registerPushSubscription } from '../lib/push'
 import { flushAvailabilityQueue, queueAvailabilityUpdate } from '../lib/offline-queue'
 import type { BloodGroup } from '../types'
@@ -20,11 +21,12 @@ type Tab = 'profile' | 'privacy' | 'notifications' | 'verification'
 interface Prefs { critical: boolean; responses: boolean; reminders: boolean }
 
 export default function Profile() {
-  const { notify } = useApp()
+  const { notify, updateDonorPhoto } = useApp()
   const { user, signOut } = useAuth()
   const navigate = useNavigate()
   const t = useT()
   const [tab, setTab] = useState<Tab>('profile')
+  const [photoUploading, setPhotoUploading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [profile, setProfile] = useState<MemberProfile | null>(null)
@@ -59,6 +61,29 @@ export default function Profile() {
 
   const displayName = profile?.displayName || String(user?.user_metadata?.display_name || user?.email?.split('@')[0] || t('common.member'))
   const initials = displayName.split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase()
+
+  const uploadPhoto = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const input = event.currentTarget
+    const file = input.files?.[0]
+    if (!file) return
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 5 * 1024 * 1024 || !file.size) {
+      notify(t('profile.photo.failed'), t('profile.photo.help'), 'danger')
+      input.value = ''
+      return
+    }
+    setPhotoUploading(true)
+    try {
+      const avatarUrl = await uploadProfilePhoto(file)
+      setProfile((current) => current ? { ...current, avatarUrl } : current)
+      if (user) updateDonorPhoto(user.id, avatarUrl)
+      notify(t('profile.photo.saved'), undefined, 'success')
+    } catch (error) {
+      notify(t('profile.photo.failed'), error instanceof Error ? error.message : t('common.pleaseTryAgain'), 'danger')
+    } finally {
+      setPhotoUploading(false)
+      input.value = ''
+    }
+  }
 
   const save = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -204,7 +229,7 @@ export default function Profile() {
   return <div className="page">
     <div className="container narrow">
       <header className="profile-head">
-        <span className="avatar-lg">{initials}</span>
+        <span className="avatar-lg">{profile?.avatarUrl ? <img src={profile.avatarUrl} alt={displayName} /> : initials}</span>
         <div><h1>{displayName}</h1><p>{profile?.email || user?.email}</p></div>
         <button className="icon-button" aria-label={t('profile.signOut')} title={t('profile.signOut')} onClick={() => void logout()}><LogOut /></button>
       </header>
@@ -240,6 +265,7 @@ export default function Profile() {
             </button>
           </div>
 
+          <ProfilePhotoUpload photoUrl={profile.avatarUrl} name={displayName} uploading={photoUploading} onChange={uploadPhoto} />
           <form className="card settings-card" onSubmit={save}>
             <header><h2>{t('profile.detailsTitle')}</h2><p>{t('profile.detailsLead')}</p></header>
             <div className="form-grid">

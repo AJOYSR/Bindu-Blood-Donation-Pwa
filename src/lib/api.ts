@@ -1,13 +1,14 @@
 import { supabase } from './supabase'
 import { track } from './analytics'
-import { stripImageMetadata } from './image'
+import { prepareProfilePhoto, stripImageMetadata } from './image'
 import type { BloodRequest, Donor } from '../types'
 import type { BloodGroup, NotificationItem } from '../types'
 
 type RequestRow={id:string;public_id:string;requester_id:string;blood_group:BloodRequest['bloodGroup'];units:number;hospital:string;district:string;area:string;urgency:BloodRequest['urgency'];status:BloodRequest['status'];needed_by:string;created_at:string;note:string|null;responses?:{count:number}[]}
-type DonorDirectoryRow={user_id:string;display_name:string;blood_group:BloodGroup;district:string;area:string;masked_phone:string|null;verification_status:string;available:boolean;available_until:string|null;last_donation_date:string|null;donation_count:number;response_rate:number}
+type DonorDirectoryRow={avatar_path?:string|null;user_id:string;display_name:string;blood_group:BloodGroup;district:string;area:string;masked_phone:string|null;verification_status:string;available:boolean;available_until:string|null;last_donation_date:string|null;donation_count:number;response_rate:number}
 
 export interface MemberProfile {
+  avatarUrl:string|null
   displayName:string
   email:string
   phone:string
@@ -31,16 +32,18 @@ export async function fetchRequests(){
 
 export async function fetchDonors(){
   if(!supabase) return null
-  const {data,error}=await supabase.rpc('get_donor_profiles',{target_user:null})
+  const {data,error}=await supabase.rpc('get_donor_profiles_with_photos',{target_user:null})
   if(error) return null
   return (data as DonorDirectoryRow[]).map(mapDonor)
 }
 
-const mapDonor=(row:DonorDirectoryRow):Donor=>({backendId:row.user_id,id:row.user_id,displayName:row.display_name,bloodGroup:row.blood_group,district:row.district,area:row.area,distanceKm:0,verified:row.verification_status==='verified',available:row.available,lastDonation:row.last_donation_date,responseRate:row.response_rate,donations:row.donation_count,maskedPhone:row.masked_phone})
+export const profilePhotoUrl=(path:string|null|undefined):string|null=>path&&supabase?supabase.storage.from('profile-photos').getPublicUrl(path).data.publicUrl:null
+
+const mapDonor=(row:DonorDirectoryRow):Donor=>({avatarUrl:profilePhotoUrl(row.avatar_path),backendId:row.user_id,id:row.user_id,displayName:row.display_name,bloodGroup:row.blood_group,district:row.district,area:row.area,distanceKm:0,verified:row.verification_status==='verified',available:row.available,lastDonation:row.last_donation_date,responseRate:row.response_rate,donations:row.donation_count,maskedPhone:row.masked_phone})
 
 export async function fetchDonorById(id:string){
   if(!supabase)return null
-  const {data,error}=await supabase.rpc('get_donor_profiles',{target_user:id})
+  const {data,error}=await supabase.rpc('get_donor_profiles_with_photos',{target_user:id})
   if(error)throw error
   const row=(data as DonorDirectoryRow[])[0]
   return row?mapDonor(row):null
@@ -71,14 +74,14 @@ export async function fetchMemberProfile():Promise<MemberProfile|null>{
   if(!supabase)return null
   const {data:{user}}=await supabase.auth.getUser();if(!user)return null
   const [{data:profile,error:profileError},{data:donor,error:donorError},{data:contact,error:contactError},{data:preference,error:preferenceError},{data:availability,error:availabilityError}]=await Promise.all([
-    supabase.from('profiles').select('display_name,district').eq('id',user.id).maybeSingle(),
+    supabase.from('profiles').select('display_name,district,avatar_path').eq('id',user.id).maybeSingle(),
     supabase.from('donor_profiles').select('blood_group,district,area,last_donation_date,searchable').eq('user_id',user.id).maybeSingle(),
     supabase.from('donor_private_contacts').select('phone').eq('user_id',user.id).maybeSingle(),
     supabase.from('contact_preferences').select('allow_phone').eq('user_id',user.id).maybeSingle(),
     supabase.from('donor_availability').select('available,available_until').eq('user_id',user.id).order('created_at',{ascending:false}).limit(1).maybeSingle(),
   ])
   const error=profileError||donorError||contactError||preferenceError||availabilityError;if(error)throw error
-  return {displayName:profile?.display_name??String(user.user_metadata?.display_name||user.email?.split('@')[0]||''),email:user.email??'',phone:contact?.phone??'',bloodGroup:(donor?.blood_group??'O+') as BloodGroup,district:donor?.district??profile?.district??'Dhaka',area:donor?.area??'',lastDonation:donor?.last_donation_date??null,searchable:donor?.searchable??true,showMaskedPhone:preference?.allow_phone??true,available:Boolean(availability?.available&&(!availability.available_until||new Date(availability.available_until)>new Date()))}
+  return {avatarUrl:profilePhotoUrl(profile?.avatar_path),displayName:profile?.display_name??String(user.user_metadata?.display_name||user.email?.split('@')[0]||''),email:user.email??'',phone:contact?.phone??'',bloodGroup:(donor?.blood_group??'O+') as BloodGroup,district:donor?.district??profile?.district??'Dhaka',area:donor?.area??'',lastDonation:donor?.last_donation_date??null,searchable:donor?.searchable??true,showMaskedPhone:preference?.allow_phone??true,available:Boolean(availability?.available&&(!availability.available_until||new Date(availability.available_until)>new Date()))}
 }
 
 export async function saveMemberProfile(input:{displayName:string;phone:string;bloodGroup:BloodGroup;district:string;area:string;lastDonation:string|null;searchable:boolean;showMaskedPhone:boolean}){
@@ -187,4 +190,27 @@ export async function fetchRequestsPage(cursor:string|null=null,statusFilter:str
   const {data,error}=await supabase.rpc('list_blood_requests_page',{page_cursor:cursor,page_limit:25,status_filter:statusFilter})
   if(error)throw error
   return (data as Array<RequestRow & {response_count:number;next_cursor:string}>).map((row)=>({...mapRequest({...row,responses:[{count:row.response_count}]}),cursor:row.next_cursor}))
+}
+
+export async function uploadProfilePhoto(file: File): Promise<string> {
+  if (!supabase) throw new Error('Sign in to upload a photo.')
+  if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 5 * 1024 * 1024 || !file.size) {
+    throw new Error('Choose a JPG, PNG or WebP image up to 5 MB.')
+  }
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) throw authError ?? new Error('Sign in to upload a photo.')
+  const photo = await prepareProfilePhoto(file)
+  const { data: previous, error: readError } = await supabase.from('profiles').select('avatar_path').eq('id', user.id).single()
+  if (readError) throw readError
+  const path = `${user.id}/${crypto.randomUUID()}.jpg`
+  const bucket = supabase.storage.from('profile-photos')
+  const { error: uploadError } = await bucket.upload(path, photo, { contentType: 'image/jpeg', cacheControl: '3600' })
+  if (uploadError) throw uploadError
+  const { error: saveError } = await supabase.from('profiles').update({ avatar_path: path }).eq('id', user.id).select('id').single()
+  if (saveError) {
+    await bucket.remove([path])
+    throw saveError
+  }
+  if (previous?.avatar_path?.startsWith(`${user.id}/`)) await bucket.remove([previous.avatar_path])
+  return profilePhotoUrl(path)!
 }
